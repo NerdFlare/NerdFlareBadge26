@@ -1,0 +1,179 @@
+(footprint "SunLED 3.2x2.8mm PLCC2 SMD LED"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 3 0)
+		(layer "F.SilkS")
+		(uuid "842661d8-cabc-4e99-8108-def96dc4d64c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "SunLED_PLCC2"
+		(at 0 3.556 0)
+		(layer "F.Fab")
+		(uuid "603fd25e-4edf-409c-a761-b0503ee42dd0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.sunledusa.com/products/spec/XZVG45WT-9.pdf"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "ef26f634-5120-4893-bf8c-542780fd60ec")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "3a77734c-7870-4998-b592-8546b3be5eab")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_line
+		(start -3.556 -1.778)
+		(end -3.302 -1.778)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "565d3f7f-6336-44e5-9408-306e28ea7cc3")
+	)
+	(fp_line
+		(start -3.556 1.778)
+		(end -3.556 -1.778)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "1b35a319-61e7-445a-ae21-b703bdc4c1ea")
+	)
+	(fp_line
+		(start -3.302 -1.778)
+		(end 3.556 -1.778)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "a4a87cf9-7712-47c7-93bc-5f00200c5515")
+	)
+	(fp_line
+		(start 3.556 -1.778)
+		(end 3.556 1.778)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "e5a18312-c6df-48b9-8d42-2ae92430e78a")
+	)
+	(fp_line
+		(start 3.556 1.778)
+		(end -3.556 1.778)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "d3e902b0-d719-4709-ab68-42cb09e2b989")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 1.4 0)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "Edge.Cuts")
+		(uuid "201d2c8e-b3f5-4ad0-8a50-577a48e58ff4")
+	)
+	(fp_text user "-"
+		(at 2.413 -3.302 0)
+		(layer "F.SilkS")
+		(uuid "304462f1-cb66-49ad-9a90-8f0465872096")
+		(effects
+			(font
+				(size 2 2)
+				(thickness 0.15)
+			)
+		)
+	)
+	(fp_text user "+"
+		(at -2.413 -3.302 0)
+		(layer "F.SilkS")
+		(uuid "be5b8223-fcdb-42d0-859b-f358b46670b0")
+		(effects
+			(font
+				(size 2 2)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "" smd circle
+		(at 0 0)
+		(size 3.2 3.2)
+		(layers "F.Mask")
+		(uuid "71e3f302-9007-4f8f-bd18-ae0870987041")
+	)
+	(pad "1" smd rect
+		(at 2.6 0)
+		(size 1.4 2.6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "5ed85f2b-4fc8-40a3-8c3f-e47240372b50")
+	)
+	(pad "2" smd rect
+		(at -2.6 0)
+		(size 1.4 2.6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "2cf4e138-c1c3-4610-9e8f-cc6fdd700105")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/XZxx45W.step"
+		(hide yes)
+		(opacity 0.9900)
+		(offset
+			(xyz 0 0 1)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 90 -0 -0)
+		)
+	)
+	(model "${KIPRJMOD}/XZxx45S-9.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -0 -0 -0)
+		)
+	)
+)
