@@ -1,0 +1,4 @@
+neopixel
+adafruit_led_animation
+asyncio
+adafruit_ticks
