@@ -5,7 +5,7 @@
  /    / -_) __/ _  / _// / _ `/ __/ -_) __// _ \ 
 /_/|_/\__/_/  \_,_/_/ /_/\_,_/_/  \__/____/\___/ 
                                         
-Firmware Version 0
+Firmware Version 0.1
 '''
 
 import neopixel
@@ -43,7 +43,7 @@ FADE_OFF = 0
 BLINK_DUR = 0.5
 
 #DEBUG Mode
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     print("starting", microcontroller.cpu.uid[:4])
@@ -57,6 +57,9 @@ while temp:
     shuffled.append(item)
     temp.remove(item)
 COLORS=shuffled
+
+if DEBUG:
+    COLORS = ["RED",  "YEL",  "BLU", "GRE"]
 
 #Try to load settings.json
 FS_WRITABLE = False 
@@ -80,6 +83,8 @@ if CURRENT_LEVEL > 3:
     FADE_DUR = 300
     FADE_OFF = 150
 
+
+level_lock = asyncio.Lock()
 
 # Randomly blink the LEDs at some interval
 async def led_sparkle(leds, speed_ms):
@@ -154,23 +159,29 @@ async def leds_task():
     global BADGE_MODE, FADE_DUR, FADE_OFF
     
     #v0 LEDs are GP8,15, 17, 21
-    #v0.1 LEDs are GP1, 2, 6, 14, 16, 19
+    #v0.1 LEDs are GP1, 2, 6, 14, 16, 19, 26
     while True:
         if BADGE_MODE == GAME_MODE:
-            pwms = [pwmio.PWMOut(board.GP8, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP15, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP17, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP21, frequency=5000, duty_cycle=0)]
+            pwms = [pwmio.PWMOut(board.GP1, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP2, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP6, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP14, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP16, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP19, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP26, frequency=5000, duty_cycle=0)]
             await cascade_fade(pwms, fade_duration_ms=FADE_DUR, start_offset_ms=FADE_OFF)
             for pwm in pwms:
                 pwm.deinit()
         elif BADGE_MODE == SPARKLE_MODE:
-            D1 = digitalio.DigitalInOut(board.GP8)
+            D1 = digitalio.DigitalInOut(board.GP1)
             D1.direction = digitalio.Direction.OUTPUT
-            D2 = digitalio.DigitalInOut(board.GP15)
+            D2 = digitalio.DigitalInOut(board.GP2)
             D2.direction = digitalio.Direction.OUTPUT
-            D3 = digitalio.DigitalInOut(board.GP17)
+            D3 = digitalio.DigitalInOut(board.GP6)
             D3.direction = digitalio.Direction.OUTPUT
-            D4 = digitalio.DigitalInOut(board.GP21)
+            D4 = digitalio.DigitalInOut(board.GP14)
             D4.direction = digitalio.Direction.OUTPUT
-            leds = [D1, D2, D3, D4]
+            D5 = digitalio.DigitalInOut(board.GP16)
+            D5.direction = digitalio.Direction.OUTPUT
+            D6 = digitalio.DigitalInOut(board.GP19)
+            D6.direction = digitalio.Direction.OUTPUT
+            D7 = digitalio.DigitalInOut(board.GP26)
+            D7.direction = digitalio.Direction.OUTPUT
+            leds = [D1, D2, D3, D4, D5, D6, D7]
             await led_sparkle(leds, speed_ms=250)
             for led in leds:
                 led.deinit()
@@ -190,7 +201,7 @@ async def button_task(interval):
     
     #v0 is GP16
     #v0.1 is GP0
-    button_pin = board.GP16
+    button_pin = board.GP0
     button =  digitalio.DigitalInOut(button_pin)
     button.direction = digitalio.Direction.INPUT
     button.pull = digitalio.Pull.UP
@@ -216,28 +227,39 @@ async def button_task(interval):
 async def neopixel_play_game(pixels):
     global BLINK_DUR
     
-    pixels.fill((0,0,0))
+    async with level_lock:
+        if CURRENT_LEVEL > 3:
+            await asyncio.sleep(0)
+        else:
+            pixels.fill((0,0,0))
+            pixels.show()
+            await asyncio.sleep(.5)
+            
+            #Fill in neopixels up to current level
+            for i in range(CURRENT_LEVEL + 1):
+                pixels[i] = COLOR_DICT[COLORS[i]]
+                pixels.show()
+                await asyncio.sleep(.5)
+                
+                #print(f"Setting {i} to {colors[i]}")
+            
+            
+            #Blink current level
+            for i in range(3):
+                pixels[CURRENT_LEVEL] = (0,0,0)
+                pixels.show()
+                await asyncio.sleep(BLINK_DUR)
+                pixels[CURRENT_LEVEL] = COLOR_DICT[COLORS[CURRENT_LEVEL]]
+                pixels.show()
+                await asyncio.sleep(BLINK_DUR)
+        
     
-    #Fill in neopixels up to current level
-    for i in range(CURRENT_LEVEL + 1):
-        pixels[i] = COLOR_DICT[COLORS[i]]
-        #print(f"Setting {i} to {colors[i]}")
-    pixels.show()
-    
-    #Blink current level
-    pixels[CURRENT_LEVEL] = (0,0,0)
-    pixels.show()
-    await asyncio.sleep(BLINK_DUR)
-    pixels[CURRENT_LEVEL] = COLOR_DICT[COLORS[CURRENT_LEVEL]]
-    pixels.show()
-    await asyncio.sleep(BLINK_DUR)
-    
-    
+
 #Async task that handles neopixels
 async def neopixels_task(interval):
     #v0 is GP0
     #v0.1 is GP17
-    pixel_pin = board.GP0 
+    pixel_pin = board.GP17
     num_pixels = 4
     
     with neopixel.NeoPixel(pixel_pin, num_pixels, brightness=0.5, auto_write=True) as pixels:
@@ -287,7 +309,7 @@ async def uart_task(interval):
 
     #v0 broken. Bodged to TX GP12, RX GP13
     #v0.1 RX GP4, TX GP5
-    with UART(rx=board.GP13, tx=board.GP12, baudrate=9600, timeout=0) as uart:
+    with UART(rx=board.GP5, tx=board.GP4, baudrate=9600, timeout=0) as uart:
         while True:
             if BADGE_MODE == SPARKLE_MODE or CURRENT_LEVEL > 3: #Ignore UART if not in game mode or game is beaten
                 await asyncio.sleep(interval)
@@ -319,21 +341,23 @@ async def uart_task(interval):
                             message_started = False
                             
                             if message == COLORS[CURRENT_LEVEL]: #Did we get a match?
+                                async with level_lock:
+                                    await match_animation() 
                                 
-                                await match_animation() 
                                 
-                                CURRENT_LEVEL = CURRENT_LEVEL + 1
-                                if FS_WRITABLE:
-                                    settings["level"] = CURRENT_LEVEL
-                                    with open("settings.json", "w") as f:
-                                        json.dump(settings, f)
-                                    f.close()
-                                if CURRENT_LEVEL > 3: #If we'ce won, set the animation sequence
-                                    FADE_DUR=300
-                                    FADE_OFF=150
-                                else: #Otherwise turn off LEDs
-                                    FADE_DUR=0
-                                    FADE_OFF=0
+                                    CURRENT_LEVEL = CURRENT_LEVEL + 1
+                                    
+                                    if FS_WRITABLE:
+                                        settings["level"] = CURRENT_LEVEL
+                                        with open("settings.json", "w") as f:
+                                            json.dump(settings, f)
+                                        f.close()
+                                    if CURRENT_LEVEL > 3: #If we'ce won, set the animation sequence
+                                        FADE_DUR=300
+                                        FADE_OFF=150
+                                    else: #Otherwise turn off LEDs
+                                        FADE_DUR=0
+                                        FADE_OFF=0
                         else:
                             message_buffer.append(chr(byte_read[0]))
 
