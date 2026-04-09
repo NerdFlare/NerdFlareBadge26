@@ -5,7 +5,7 @@
  /    / -_) __/ _  / _// / _ `/ __/ -_) __// _ \ 
 /_/|_/\__/_/  \_,_/_/ /_/\_,_/_/  \__/____/\___/ 
                                         
-Firmware Version 0.1
+Firmware Version 0.1.1
 '''
 
 import neopixel
@@ -29,13 +29,12 @@ import random
 
 
 # SETTINGS (overwritten from settings.json if available)
-BADGE_MODE = 0
 NUM_MODES = 2
 SPARKLE_MODE = 0
 GAME_MODE = 1
 COLORS = ["RED",  "YEL",  "BLU", "GRE"]
 COLOR_DICT = {"RED":(255,0,0), "BLU":(0,0,255), "GRE":(0,255,0), "YEL":(255,255,0)}
-CURRENT_LEVEL = 0
+LED_BRIGHTNESS = 0.5
 
 # LED and NEOPIXEL animation settings
 FADE_DUR = 0
@@ -77,6 +76,9 @@ except Exception as e:
     if DEBUG:
         print("Can't mount the file system. Using Defaults.")
     FS_WRITABLE = False
+    BADGE_MODE = 0
+    CURRENT_LEVEL = 0
+
    
 #If we've won, start the LED animation
 if CURRENT_LEVEL > 3:
@@ -84,9 +86,9 @@ if CURRENT_LEVEL > 3:
     FADE_OFF = 150
 
 
-level_lock = asyncio.Lock()
+level_lock = asyncio.Lock() #Mutex for updating/accessing the CURRENT_LEVEL variable, which can lead to a race condition when unprotected
 
-# Randomly blink the LEDs at some interval
+# Randomly blink the (digital) LEDs at some interval
 async def led_sparkle(leds, speed_ms):
     speed = speed_ms / 1000
 
@@ -109,6 +111,30 @@ async def led_sparkle(leds, speed_ms):
     await asyncio.sleep(sparkle_time)
     led.value = False
     led2.value = False
+
+async def pwm_led_sparkle(pwms, speed_ms, brightness=1.0):
+    speed = speed_ms / 1000
+
+    # Ensure all LEDs start off
+    for pwm in pwms:
+        pwm.duty_cycle = 0
+
+    # wait a random amount around the requested speed
+    wait_time = random.uniform(speed * 0.5, speed * 1.5)
+    await asyncio.sleep(wait_time)
+
+    pwm= random.choice(pwms)
+    pwm2 = random.choice(pwms)
+
+    # random sparkle duration
+    sparkle_time = random.uniform(0.03, 0.2)
+
+
+    pwm.duty_cycle = int(brightness * 65535)
+    pwm2.duty_cycle = int(brightness * 65535)
+    await asyncio.sleep(sparkle_time)
+    for pwm in pwms:
+        pwm.duty_cycle = 0
 
 #fade PWM LEDs with staggered start times.
 #pwms (list): List of PWMOut objects.
@@ -160,13 +186,17 @@ async def leds_task():
     
     #v0 LEDs are GP8,15, 17, 21
     #v0.1 LEDs are GP1, 2, 6, 14, 16, 19, 26
+    pwms = [pwmio.PWMOut(board.GP1, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP2, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP6, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP14, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP16, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP19, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP26, frequency=5000, duty_cycle=0)]
+
     while True:
         if BADGE_MODE == GAME_MODE:
-            pwms = [pwmio.PWMOut(board.GP1, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP2, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP6, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP14, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP16, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP19, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP26, frequency=5000, duty_cycle=0)]
+            #pwms = [pwmio.PWMOut(board.GP1, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP2, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP6, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP14, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP16, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP19, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP26, frequency=5000, duty_cycle=0)]
             await cascade_fade(pwms, fade_duration_ms=FADE_DUR, start_offset_ms=FADE_OFF)
-            for pwm in pwms:
-                pwm.deinit()
+            #for pwm in pwms:
+            #    pwm.deinit()
         elif BADGE_MODE == SPARKLE_MODE:
+            await pwm_led_sparkle(pwms, speed_ms=250, brightness=0.5)
+            '''
             D1 = digitalio.DigitalInOut(board.GP1)
             D1.direction = digitalio.Direction.OUTPUT
             D2 = digitalio.DigitalInOut(board.GP2)
@@ -185,6 +215,8 @@ async def leds_task():
             await led_sparkle(leds, speed_ms=250)
             for led in leds:
                 led.deinit()
+            '''
+        '''
         else:
             pwms = [pwmio.PWMOut(board.GP8, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP15, frequency=5000, duty_cycle=0), pwmio.PWMOut(board.GP17, frequency=5000, duty_cycle=0),pwmio.PWMOut(board.GP21, frequency=5000, duty_cycle=0)]
             for pwm in pwms:
@@ -192,6 +224,7 @@ async def leds_task():
                 await asyncio.sleep(0)
             for pwm in pwms:
                 pwm.deinit()
+        '''
                 
 
 #Async task that handles button presses
@@ -206,6 +239,7 @@ async def button_task(interval):
     button.direction = digitalio.Direction.INPUT
     button.pull = digitalio.Pull.UP
     prev_state = True
+    await asyncio.sleep(1) #Sleep for just a second so make sure pullup is set
     while True:
         cur_state = button.value
         if cur_state != prev_state:
@@ -225,10 +259,10 @@ async def button_task(interval):
 
 #Controls the neopixles during game mode
 async def neopixel_play_game(pixels):
-    global BLINK_DUR
+    global BLINK_DUR, BADGE_MODE
     
-    async with level_lock:
-        if CURRENT_LEVEL > 3:
+    async with level_lock: #We need to lock here to prevent staying in game mode after the level has increased
+        if CURRENT_LEVEL > 3: #If the level has been increased, then immediately sleep and return. We won't be back.
             await asyncio.sleep(0)
         else:
             pixels.fill((0,0,0))
@@ -237,21 +271,20 @@ async def neopixel_play_game(pixels):
             
             #Fill in neopixels up to current level
             for i in range(CURRENT_LEVEL + 1):
-                pixels[i] = COLOR_DICT[COLORS[i]]
-                pixels.show()
-                await asyncio.sleep(.5)
-                
-                #print(f"Setting {i} to {colors[i]}")
-            
+                if BADGE_MODE == GAME_MODE: #These IFs speed up the transition back to SPARKLE MODE if the button is pressed mid function
+                    pixels[i] = COLOR_DICT[COLORS[i]]
+                    pixels.show()
+                    await asyncio.sleep(.5)            
             
             #Blink current level
             for i in range(3):
-                pixels[CURRENT_LEVEL] = (0,0,0)
-                pixels.show()
-                await asyncio.sleep(BLINK_DUR)
-                pixels[CURRENT_LEVEL] = COLOR_DICT[COLORS[CURRENT_LEVEL]]
-                pixels.show()
-                await asyncio.sleep(BLINK_DUR)
+                if BADGE_MODE == GAME_MODE: #These IFs speed up the transition back to SPARKLE MODE if the button is pressed mid function
+                    pixels[CURRENT_LEVEL] = (0,0,0)
+                    pixels.show()
+                    await asyncio.sleep(BLINK_DUR)
+                    pixels[CURRENT_LEVEL] = COLOR_DICT[COLORS[CURRENT_LEVEL]]
+                    pixels.show()
+                    await asyncio.sleep(BLINK_DUR)
         
     
 
@@ -262,7 +295,7 @@ async def neopixels_task(interval):
     pixel_pin = board.GP17
     num_pixels = 4
     
-    with neopixel.NeoPixel(pixel_pin, num_pixels, brightness=0.5, auto_write=True) as pixels:
+    with neopixel.NeoPixel(pixel_pin, num_pixels, brightness=LED_BRIGHTNESS, auto_write=True) as pixels:
         rainbow_comet = RainbowComet(pixels, speed=.075, tail_length=8, bounce=True )
         sparkle_pulse = SparklePulse(pixels, speed=0.13, period=1, color=WHITE)
         while True:
